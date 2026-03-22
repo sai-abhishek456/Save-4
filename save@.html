@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save@5km - Emergency Response Network</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-red: #e63946;
+            --dark-red: #d00000;
+            --light-red: #ff6b6b;
+            --primary-blue: #1d3557;
+            --light-blue: #457b9d;
+            --aqua-blue: #a8dadc;
+            --white: #f8f9fa;
+            --light-gray: #e9ecef;
+            --medium-gray: #adb5bd;
+            --dark-gray: #495057;
+            --success-green: #2a9d8f;
+            --warning-orange: #e9c46a;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--white);
+            color: var(--dark-gray);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* App Container */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 25px 0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        
+        .logo-area {
+            padding: 0 25px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .logo-icon {
+            background-color: var(--primary-red);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: 800;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .logo-text span {
+            color: var(--primary-red);
+        }
+        
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+        
+        .toggle-sidebar {
+            position: absolute;
+            top: 25px;
+            right: -15px;
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: 101;
+        }
+        
+        .nav-menu {
+            flex: 1;
+            list-style: none;
+            padding: 0 20px;
+        }
+        
+        .nav-item {
+            margin-bottom: 8px;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .nav-link i {
+            font-size: 20px;
+            width: 24px;
+            flex-shrink: 0;
+        }
+        
+        .sidebar.collapsed .nav-link span {
+            display: none;
+        }
+        
+        .user-area {
+            padding: 25px 20px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--aqua-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--primary-blue);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .user-details {
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .user-role {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .sidebar.collapsed .user-details {
+            display: none;
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .top-bar {
+            background-color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+        }
+        
+        .page-title {
+            font-size: 28px;
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+        
+        .page-subtitle {
+            color: var(--medium-gray);
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .alert-indicator {
+            position: relative;
+        }
+        
+        .alert-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--primary-red);
+            color: white;
+            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .alert-btn {
+            background-color: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        
+        .alert-btn:hover {
+            background-color: var(--dark-red);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(230, 57, 70, 0.3);
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background-color: #f9fafc;
+        }
+        
+        /* Dashboard Styles */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+        
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background-color: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+        }
+        
+        .stat-info h3 {
+            font-size: 28px;
+            color: var(--primary-blue);
+            margin-bottom: 5px;
+        }
+        
+        .stat-info p {
+            color: var(--medium-gray);
+            font-size: 14px;
+        }
+        
+        /* FIXED MAP CONTAINER STYLES */
+        .map-container {
+            height: 500px;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        #dashboardMap, #fullMap {
+            height: 100% !important;
+            width: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+        }
+        
+        /* Alerts Container */
+        .alerts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .alert-card {
+            background-color: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            border-left: 6px solid var(--primary-red);
+            position: relative;
+            transition: transform 0.3s;
+        }
+        
+        .alert-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .alert-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+        
+        .alert-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .alert-badge.high {
+            background-color: rgba(230, 57, 70, 0.1);
+            color: var(--primary-red);
+        }
+        
+        .alert-badge.medium {
+            background-color: rgba(233, 196, 106, 0.1);
+            color: #b38c00;
+        }
+        
+        .alert-badge.low {
+            background-color: rgba(42, 157, 143, 0.1);
+            color: var(--success-green);
+        }
+        
+        .alert-details {
+            margin-bottom: 20px;
+        }
+        
+        .alert-detail {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .alert-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+            font-size: 15px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-red);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--dark-red);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary-blue);
+            border: 1px solid var(--primary-blue);
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: var(--success-green);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #21867a;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            padding: 40px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--dark-gray);
+        }
+        
+        .modal h2 {
+            color: var(--primary-blue);
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        
+        .modal h3 {
+            color: var(--primary-blue);
+            margin: 25px 0 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-gray);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(29, 53, 87, 0.1);
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        /* Emergency Alert Modal */
+        .emergency-modal .modal-content {
+            max-width: 500px;
+            animation: pulse-emergency 2s infinite;
+        }
+        
+        @keyframes pulse-emergency {
+            0% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(230, 57, 70, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0); }
+        }
+        
+        .emergency-header {
+            background-color: var(--primary-red);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .emergency-header h2 {
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        /* Tab Navigation */
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 25px;
+        }
+        
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            color: var(--medium-gray);
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-blue);
+        }
+        
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-blue);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .sidebar {
+                position: fixed;
+                height: 100vh;
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+            
+            .toggle-sidebar {
+                right: auto;
+                left: 100%;
+                top: 25px;
+            }
+            
+            .mobile-menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                font-size: 24px;
+                color: var(--primary-blue);
+                cursor: pointer;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .top-bar-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .alerts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .map-container {
+                height: 400px;
+            }
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-blue);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 3000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .toast-success .toast-icon {
+            background-color: rgba(42, 157, 143, 0.1);
+            color: var(--success-green);
+        }
+        
+        .toast-error .toast-icon {
+            background-color: rgba(230, 57, 70, 0.1);
+            color: var(--primary-red);
+        }
+        
+        .toast-info .toast-icon {
+            background-color: rgba(29, 53, 87, 0.1);
+            color: var(--primary-blue);
+        }
+        
+        .toast-content h4 {
+            margin-bottom: 5px;
+            color: var(--primary-blue);
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--medium-gray);
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        /* Login Page */
+        .login-container {
+            display: flex;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+        }
+        
+        .login-left {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: white;
+        }
+        
+        .login-left h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .login-left p {
+            font-size: 18px;
+            margin-bottom: 40px;
+            max-width: 600px;
+            opacity: 0.9;
+        }
+        
+        .login-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 40px;
+        }
+        
+        .login-feature {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .login-feature i {
+            font-size: 24px;
+            color: var(--aqua-blue);
+        }
+        
+        .login-right {
+            width: 500px;
+            background-color: white;
+            padding: 60px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .login-form h2 {
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .login-form p {
+            color: var(--medium-gray);
+            margin-bottom: 40px;
+        }
+        
+        .login-form .btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .login-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+        
+        .login-logo .logo-icon {
+            width: 60px;
+            height: 60px;
+            font-size: 26px;
+        }
+        
+        .login-logo .logo-text {
+            font-size: 32px;
+            color: var(--primary-blue);
+        }
+        
+        @media (max-width: 992px) {
+            .login-container {
+                flex-direction: column;
+            }
+            
+            .login-left {
+                padding: 30px;
+            }
+            
+            .login-right {
+                width: 100%;
+                padding: 40px 30px;
+            }
+            
+            .login-features {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Map Legend */
+        .map-legend {
+            background: white;
+            padding: 15px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 200px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+        }
+        
+        /* Pulse animation for emergency markers */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .pulse-marker {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Page (Initial View) -->
+    <div class="login-container" id="loginPage">
+        <div class="login-left">
+            <div class="login-logo">
+                <div class="logo-icon">S@5</div>
+                <div class="logo-text">Save<span>@5km</span></div>
+            </div>
+            <h1>Turning Bystanders into Lifesavers</h1>
+            <p>Save@5km detects road accidents in real-time using IoT sensors and instantly alerts registered users within a 5 km radius, mobilizing immediate community response during the critical golden hour.</p>
+            
+            <div class="login-features">
+                <div class="login-feature">
+                    <i class="fas fa-satellite-dish"></i>
+                    <div>
+                        <h3>Real-Time Detection</h3>
+                        <p>IoT sensors detect accidents instantly</p>
+                    </div>
+                </div>
+                <div class="login-feature">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <h3>Community Response</h3>
+                        <p>Alerts sent to users within 5 km radius</p>
+                    </div>
+                </div>
+                <div class="login-feature">
+                    <i class="fas fa-first-aid"></i>
+                    <div>
+                        <h3>First Aid Support</h3>
+                        <p>Step-by-step guidance for responders</p>
+                    </div>
+                </div>
+                <div class="login-feature">
+                    <i class="fas fa-ambulance"></i>
+                    <div>
+                        <h3>Emergency Integration</h3>
+                        <p>Direct connection to hospitals & police</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="login-right">
+            <div class="login-form">
+                <h2>Welcome Back</h2>
+                <p>Sign in to access the emergency response dashboard</p>
+                
+                <div class="form-group">
+                    <label for="loginPhone">Phone Number</label>
+                    <input type="tel" id="loginPhone" class="form-control" placeholder="Enter your registered phone number" value="+1 (555) 123-4567">
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" value="password123">
+                </div>
+                
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                    <label style="margin-bottom: 0;">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
+                    <a href="#" style="color: var(--primary-blue); text-decoration: none;">Forgot password?</a>
+                </div>
+                
+                <button class="btn btn-primary" id="loginBtn">Sign In</button>
+                
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="color: var(--medium-gray);">Don't have an account? <a href="#" id="showRegister" style="color: var(--primary-blue); text-decoration: none; font-weight: 600;">Register as Responder</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Application (Hidden Initially) -->
+    <div class="app-container" id="appContainer" style="display: none;">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar" id="sidebar">
+            <div class="logo-area">
+                <a href="#" class="logo">
+                    <div class="logo-icon">S@5</div>
+                    <div class="logo-text">Save<span>@5km</span></div>
+                </a>
+            </div>
+            
+            <button class="toggle-sidebar" id="toggleSidebar">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="alerts">
+                        <i class="fas fa-bell"></i>
+                        <span>Alerts</span>
+                        <span class="alert-badge" id="sidebarAlertCount">3</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="map">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Live Map</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="responders">
+                        <i class="fas fa-users"></i>
+                        <span>Responders</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="history">
+                        <i class="fas fa-history"></i>
+                        <span>Response History</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="training">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>Training</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="user-area">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">JS</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">John Smith</div>
+                        <div class="user-role">Verified Responder</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div>
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                    <p class="page-subtitle" id="pageSubtitle">Welcome back, John. You are currently <span style="color: var(--success-green); font-weight: 600;">ON DUTY</span> and ready to respond.</p>
+                </div>
+                
+                <div class="top-bar-actions">
+                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <div class="alert-indicator">
+                        <button class="alert-btn" id="emergencyAlertBtn">
+                            <i class="fas fa-plus"></i> Report Emergency
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Content Area (Dynamically loaded) -->
+            <div class="content-area" id="contentArea">
+                <!-- Dashboard content will be loaded here -->
+                <div id="dashboardContent">
+                    <div class="dashboard-grid">
+                        <!-- Stats Cards -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                                    <i class="fas fa-car-crash"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3 id="totalAlerts">14</h3>
+                                    <p>Alerts This Month</p>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(42, 157, 143, 0.1); color: var(--success-green);">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3 id="responsesCount">9</h3>
+                                    <p>Your Responses</p>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3 id="avgResponseTime">4.2</h3>
+                                    <p>Avg. Response Time (min)</p>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(233, 196, 106, 0.1); color: #b38c00;">
+                                    <i class="fas fa-medal"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3 id="responderRank">42</h3>
+                                    <p>Your Rank</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Map -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Live Incidents Map</h2>
+                                <div class="card-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                                    <i class="fas fa-map"></i>
+                                </div>
+                            </div>
+                            <div class="map-container">
+                                <div id="dashboardMap"></div>
+                                <div class="map-legend">
+                                    <h4 style="margin-bottom: 10px; color: var(--primary-blue);">Map Legend</h4>
+                                    <div class="legend-item">
+                                        <div class="legend-color" style="background-color: #e63946;"></div>
+                                        <span style="font-size: 14px;">Emergency Incident</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color" style="background-color: #2a9d8f;"></div>
+                                        <span style="font-size: 14px;">Responder</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <div class="legend-color" style="background-color: #1d3557; opacity: 0.3;"></div>
+                                        <span style="font-size: 14px;">5km Radius</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p style="color: var(--medium-gray); margin-top: 15px; font-size: 14px;">
+                                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                                Showing active incidents within your 5km response radius
+                            </p>
+                        </div>
+                        
+                        <!-- Recent Alerts -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Recent Emergency Alerts</h2>
+                                <div class="card-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                            </div>
+                            <div id="recentAlerts">
+                                <!-- Alerts will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Actions -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h2 class="card-title">Quick Actions</h2>
+                                <div class="card-icon" style="background-color: rgba(42, 157, 143, 0.1); color: var(--success-green);">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
+                                <button class="btn btn-primary" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                    <i class="fas fa-first-aid" style="font-size: 24px;"></i>
+                                    <span>First Aid Guide</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                    <i class="fas fa-history" style="font-size: 24px;"></i>
+                                    <span>Response History</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                    <i class="fas fa-user-friends" style="font-size: 24px;"></i>
+                                    <span>Nearby Responders</span>
+                                </button>
+                                <button class="btn btn-success" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                                    <i class="fas fa-wrench" style="font-size: 24px;"></i>
+                                    <span>Update Status</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Other pages content will be loaded here -->
+                <div id="alertsContent" style="display: none;">
+                    <!-- Alerts page content -->
+                </div>
+                
+                <div id="mapContent" style="display: none;">
+                    <!-- Map page content -->
+                </div>
+                
+                <div id="respondersContent" style="display: none;">
+                    <!-- Responders page content -->
+                </div>
+                
+                <div id="historyContent" style="display: none;">
+                    <!-- History page content -->
+                </div>
+                
+                <div id="trainingContent" style="display: none;">
+                    <!-- Training page content -->
+                </div>
+                
+                <div id="settingsContent" style="display: none;">
+                    <!-- Settings page content -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Emergency Alert Modal -->
+    <div class="modal emergency-modal" id="emergencyModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeEmergencyModal">&times;</button>
+            <div class="emergency-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> REPORT EMERGENCY</h2>
+                <p>Only use this for actual emergencies</p>
+            </div>
+            
+            <form id="emergencyForm">
+                <div class="form-group">
+                    <label for="emergencyType">Emergency Type</label>
+                    <select id="emergencyType" class="form-control" required>
+                        <option value="">Select type of emergency</option>
+                        <option value="car_accident">Car Accident</option>
+                        <option value="motorcycle_accident">Motorcycle Accident</option>
+                        <option value="pedestrian_hit">Pedestrian Hit</option>
+                        <option value="medical_emergency">Medical Emergency</option>
+                        <option value="fire">Fire</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="emergencyLocation">Location</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <input type="text" id="emergencyLocation" class="form-control" placeholder="Street address or landmark" required>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-outline" id="useCurrentLocation" style="white-space: nowrap;">
+                                <i class="fas fa-location-arrow"></i> Use My Location
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="emergencySeverity">Severity Level</label>
+                    <select id="emergencySeverity" class="form-control" required>
+                        <option value="high">High - Life threatening, immediate help needed</option>
+                        <option value="medium">Medium - Serious injury, urgent help needed</option>
+                        <option value="low">Low - Minor injury, assistance needed</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="emergencyDescription">Description (Optional)</label>
+                    <textarea id="emergencyDescription" class="form-control" placeholder="Provide any additional details about the emergency..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="confirmEmergency" required>
+                        I confirm this is a real emergency and I'm reporting it in good faith
+                    </label>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 30px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1; padding: 15px;">
+                        <i class="fas fa-bell"></i> SEND EMERGENCY ALERT
+                    </button>
+                    <button type="button" class="btn btn-outline" id="cancelEmergency" style="flex: 1; padding: 15px;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Respond to Alert Modal -->
+    <div class="modal" id="respondModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeRespondModal">&times;</button>
+            <h2>Respond to Emergency</h2>
+            
+            <div id="respondAlertDetails">
+                <!-- Alert details will be populated here -->
+            </div>
+            
+            <div class="form-group">
+                <label for="responseETA">Your Estimated Time of Arrival (minutes)</label>
+                <input type="number" id="responseETA" class="form-control" min="1" max="60" value="5" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="responseNotes">Notes (Optional)</label>
+                                <textarea id="responseNotes" class="form-control" placeholder="Any additional information about your response..."></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                <button type="button" class="btn btn-success" id="confirmResponse" style="flex: 1; padding: 15px;">
+                    <i class="fas fa-check-circle"></i> CONFIRM RESPONSE
+                </button>
+                <button type="button" class="btn btn-outline" id="cancelResponse" style="flex: 1; padding: 15px;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Registration Modal -->
+    <div class="modal" id="registrationModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeRegistrationModal">&times;</button>
+            <h2>Join Save@5km</h2>
+            <p>Register to become a community responder and help save lives in your area.</p>
+            
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="personal">Personal Info</button>
+                <button class="tab-btn" data-tab="location">Location</button>
+                <button class="tab-btn" data-tab="training">Training</button>
+            </div>
+            
+            <form id="registrationForm">
+                <div class="tab-content active" id="personal-tab">
+                    <div class="form-group">
+                        <label for="regFullName">Full Name</label>
+                        <input type="text" id="regFullName" class="form-control" placeholder="Enter your full name" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="regPhone">Phone Number</label>
+                            <input type="tel" id="regPhone" class="form-control" placeholder="Enter your mobile number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="regEmail">Email Address</label>
+                            <input type="email" id="regEmail" class="form-control" placeholder="Enter your email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regPassword">Password</label>
+                        <input type="password" id="regPassword" class="form-control" placeholder="Create a password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regConfirmPassword">Confirm Password</label>
+                        <input type="password" id="regConfirmPassword" class="form-control" placeholder="Confirm your password" required>
+                    </div>
+                    
+                    <div style="text-align: right; margin-top: 30px;">
+                        <button type="button" class="btn btn-primary next-tab" data-next="location">Next <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="location-tab">
+                    <div class="form-group">
+                        <label for="regAddress">Address</label>
+                        <input type="text" id="regAddress" class="form-control" placeholder="Enter your street address" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="regCity">City</label>
+                            <input type="text" id="regCity" class="form-control" placeholder="City" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="regState">State/Region</label>
+                            <input type="text" id="regState" class="form-control" placeholder="State/Region" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="regZip">ZIP/Postal Code</label>
+                            <input type="text" id="regZip" class="form-control" placeholder="ZIP/Postal Code" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="regCountry">Country</label>
+                            <input type="text" id="regCountry" class="form-control" placeholder="Country" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="shareLocation" required>
+                            I agree to share my location with the Save@5km system when I'm available to respond
+                        </label>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                        <button type="button" class="btn btn-outline prev-tab" data-prev="personal">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="button" class="btn btn-primary next-tab" data-next="training">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="training-tab">
+                    <div class="form-group">
+                        <label for="regFirstAid">First Aid Training Level</label>
+                        <select id="regFirstAid" class="form-control">
+                            <option value="none">No formal training</option>
+                            <option value="basic">Basic first aid certified</option>
+                            <option value="advanced">Advanced/EMT certified</option>
+                            <option value="medical_professional">Medical professional</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regCertifications">Certifications (Optional)</label>
+                        <textarea id="regCertifications" class="form-control" placeholder="List any relevant certifications (CPR, AED, etc.)"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="regTerms" required>
+                            I agree to the <a href="#" style="color: var(--primary-blue);">Terms of Service</a> and <a href="#" style="color: var(--primary-blue);">Privacy Policy</a>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="regNotifications" checked>
+                            I want to receive emergency alerts and notifications
+                        </label>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 30px;">
+                        <button type="button" class="btn btn-outline prev-tab" data-prev="location">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Complete Registration
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <div class="toast-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="toast-content">
+            <h4 id="toastTitle">Success</h4>
+            <p id="toastMessage">Operation completed successfully</p>
+        </div>
+        <button class="toast-close" id="toastClose">&times;</button>
+    </div>
+
+    <!-- Include Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Application State
+        const AppState = {
+            currentUser: null,
+            isLoggedIn: false,
+            currentPage: 'dashboard',
+            alerts: [],
+            responders: [],
+            maps: {},
+            currentAlertId: null
+        };
+
+        // Mock Data
+        const mockAlerts = [
+            {
+                id: 1,
+                type: 'car_accident',
+                severity: 'high',
+                location: 'Intersection of 5th Ave & Main St',
+                coordinates: [40.7489, -73.9680],
+                time: '2023-10-15T14:30:00',
+                description: 'Two-car collision with injuries reported',
+                status: 'active',
+                responders: 2,
+                responseTime: 4
+            },
+            {
+                id: 2,
+                type: 'motorcycle_accident',
+                severity: 'medium',
+                location: 'Highway 101, Northbound',
+                coordinates: [40.7589, -73.9851],
+                time: '2023-10-15T13:45:00',
+                description: 'Motorcycle skidded off road',
+                status: 'active',
+                responders: 1,
+                responseTime: 7
+            },
+            {
+                id: 3,
+                type: 'medical_emergency',
+                severity: 'high',
+                location: 'Central Park near 72nd St',
+                coordinates: [40.7736, -73.9716],
+                time: '2023-10-15T12:15:00',
+                description: 'Person collapsed, difficulty breathing',
+                status: 'responded',
+                responders: 3,
+                responseTime: 3
+            }
+        ];
+
+        const mockResponders = [
+            { id: 1, name: 'Sarah Johnson', distance: 0.8, status: 'available', skills: ['First Aid', 'CPR'] },
+            { id: 2, name: 'Michael Chen', distance: 1.2, status: 'available', skills: ['EMT', 'AED'] },
+            { id: 3, name: 'David Wilson', distance: 2.5, status: 'responding', skills: ['First Aid'] },
+            { id: 4, name: 'Maria Garcia', distance: 3.1, status: 'available', skills: ['CPR', 'Basic Life Support'] },
+            { id: 5, name: 'Robert Kim', distance: 4.2, status: 'offline', skills: ['First Aid', 'AED'] }
+        ];
+
+        // DOM Elements
+        const loginPage = document.getElementById('loginPage');
+        const appContainer = document.getElementById('appContainer');
+        const loginBtn = document.getElementById('loginBtn');
+        const showRegister = document.getElementById('showRegister');
+        const emergencyAlertBtn = document.getElementById('emergencyAlertBtn');
+        const emergencyModal = document.getElementById('emergencyModal');
+        const closeEmergencyModal = document.getElementById('closeEmergencyModal');
+        const emergencyForm = document.getElementById('emergencyForm');
+        const respondModal = document.getElementById('respondModal');
+        const closeRespondModal = document.getElementById('closeRespondModal');
+        const registrationModal = document.getElementById('registrationModal');
+        const closeRegistrationModal = document.getElementById('closeRegistrationModal');
+        const registrationForm = document.getElementById('registrationForm');
+        const toggleSidebar = document.getElementById('toggleSidebar');
+        const sidebar = document.getElementById('sidebar');
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const toast = document.getElementById('toast');
+        const toastClose = document.getElementById('toastClose');
+        const useCurrentLocation = document.getElementById('useCurrentLocation');
+        const cancelEmergency = document.getElementById('cancelEmergency');
+        const confirmResponse = document.getElementById('confirmResponse');
+        const cancelResponse = document.getElementById('cancelResponse');
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is already logged in (from localStorage)
+            const savedUser = localStorage.getItem('save5km_user');
+            if (savedUser) {
+                AppState.currentUser = JSON.parse(savedUser);
+                AppState.isLoggedIn = true;
+                showApp();
+            }
+
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Load recent alerts
+            loadRecentAlerts();
+        });
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Login
+            loginBtn.addEventListener('click', handleLogin);
+            showRegister.addEventListener('click', () => {
+                showToast('Registration', 'Redirecting to registration form...', 'info');
+                setTimeout(() => {
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('registrationModal').style.display = 'flex';
+                }, 1000);
+            });
+
+            // Emergency Alert
+            emergencyAlertBtn.addEventListener('click', () => {
+                emergencyModal.style.display = 'flex';
+            });
+
+            closeEmergencyModal.addEventListener('click', () => {
+                emergencyModal.style.display = 'none';
+            });
+
+            cancelEmergency.addEventListener('click', () => {
+                emergencyModal.style.display = 'none';
+            });
+
+            // Use Current Location
+            useCurrentLocation.addEventListener('click', () => {
+                document.getElementById('emergencyLocation').value = 'Current Location (GPS: 40.7128° N, 74.0060° W)';
+                showToast('Location', 'Using your current location', 'success');
+            });
+
+            // Emergency Form Submission
+            emergencyForm.addEventListener('submit', handleEmergencyReport);
+
+            // Respond Modal
+            closeRespondModal.addEventListener('click', () => {
+                respondModal.style.display = 'none';
+            });
+
+            cancelResponse.addEventListener('click', () => {
+                respondModal.style.display = 'none';
+            });
+
+            confirmResponse.addEventListener('click', handleConfirmResponse);
+
+            // Registration Modal
+            closeRegistrationModal.addEventListener('click', () => {
+                registrationModal.style.display = 'none';
+                loginPage.style.display = 'flex';
+            });
+
+            // Registration Form Tabs
+            document.querySelectorAll('.next-tab').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const nextTab = this.getAttribute('data-next');
+                    switchTab(nextTab);
+                });
+            });
+
+            document.querySelectorAll('.prev-tab').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const prevTab = this.getAttribute('data-prev');
+                    switchTab(prevTab);
+                });
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+
+            // Registration Form Submission
+            registrationForm.addEventListener('submit', handleRegistration);
+
+            // Sidebar Toggle
+            toggleSidebar.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                const icon = toggleSidebar.querySelector('i');
+                if (sidebar.classList.contains('collapsed')) {
+                    icon.className = 'fas fa-chevron-right';
+                } else {
+                    icon.className = 'fas fa-chevron-left';
+                }
+            });
+
+            // Mobile Menu Toggle
+            mobileMenuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // Navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Get page to load
+                    const page = this.getAttribute('data-page');
+                    
+                    // Update page
+                    loadPage(page);
+                    
+                    // Close mobile sidebar if open
+                    if (window.innerWidth <= 1200) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            });
+
+            // Toast Close
+            toastClose.addEventListener('click', () => {
+                toast.classList.remove('show');
+            });
+
+            // Close modals when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target === emergencyModal) {
+                    emergencyModal.style.display = 'none';
+                }
+                if (e.target === respondModal) {
+                    respondModal.style.display = 'none';
+                }
+                if (e.target === registrationModal) {
+                    registrationModal.style.display = 'none';
+                    loginPage.style.display = 'flex';
+                }
+            });
+        }
+
+        // Handle Login
+        function handleLogin() {
+            const phone = document.getElementById('loginPhone').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!phone || !password) {
+                showToast('Error', 'Please enter phone number and password', 'error');
+                return;
+            }
+            
+            // Mock login - in a real app, this would be an API call
+            AppState.currentUser = {
+                id: 1,
+                name: 'John Smith',
+                phone: phone,
+                email: 'john.smith@example.com',
+                role: 'verified_responder',
+                avatar: 'JS'
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('save5km_user', JSON.stringify(AppState.currentUser));
+            
+            showToast('Success', 'Login successful! Loading dashboard...', 'success');
+            
+            setTimeout(() => {
+                AppState.isLoggedIn = true;
+                showApp();
+                // Initialize dashboard map after app is shown
+                setTimeout(initDashboardMap, 500);
+            }, 1500);
+        }
+
+        // Handle Registration
+        function handleRegistration(e) {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('regFullName').value;
+            const phone = document.getElementById('regPhone').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showToast('Error', 'Passwords do not match', 'error');
+                return;
+            }
+            
+            // Create user object
+            const newUser = {
+                id: Date.now(),
+                name: fullName,
+                phone: phone,
+                email: email,
+                role: 'new_responder',
+                avatar: fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+            };
+            
+            // Save to localStorage
+            localStorage.setItem('save5km_user', JSON.stringify(newUser));
+            
+            showToast('Success', 'Registration successful! Please login.', 'success');
+            
+            setTimeout(() => {
+                registrationModal.style.display = 'none';
+                loginPage.style.display = 'flex';
+                // Pre-fill login form
+                document.getElementById('loginPhone').value = phone;
+                document.getElementById('loginPassword').value = password;
+            }, 2000);
+        }
+
+        // Show Main Application
+        function showApp() {
+            loginPage.style.display = 'none';
+            appContainer.style.display = 'flex';
+            
+            // Update user info
+            if (AppState.currentUser) {
+                document.getElementById('userName').textContent = AppState.currentUser.name;
+                document.getElementById('userAvatar').textContent = AppState.currentUser.avatar;
+                document.getElementById('pageSubtitle').innerHTML = `Welcome back, ${AppState.currentUser.name.split(' ')[0]}. You are currently <span style="color: var(--success-green); font-weight: 600;">ON DUTY</span> and ready to respond.`;
+            }
+            
+            // Load initial page
+            loadPage('dashboard');
+        }
+
+        // Load Page Content
+        function loadPage(page) {
+            // Hide all content areas
+            document.querySelectorAll('#contentArea > div').forEach(div => {
+                div.style.display = 'none';
+            });
+            
+            // Update page title
+            const pageTitles = {
+                dashboard: 'Dashboard',
+                alerts: 'Emergency Alerts',
+                map: 'Live Map',
+                responders: 'Nearby Responders',
+                history: 'Response History',
+                training: 'Training & Resources',
+                settings: 'Settings'
+            };
+            
+            const pageSubtitles = {
+                dashboard: `Welcome back, ${AppState.currentUser ? AppState.currentUser.name.split(' ')[0] : 'User'}. You are currently <span style="color: var(--success-green); font-weight: 600;">ON DUTY</span> and ready to respond.`,
+                alerts: 'Active emergency alerts in your area',
+                map: 'Real-time incident tracking and responder locations',
+                responders: 'Community responders available in your vicinity',
+                history: 'Your past emergency responses and activities',
+                training: 'First aid training resources and certification',
+                settings: 'Manage your account and notification preferences'
+            };
+            
+            document.getElementById('pageTitle').textContent = pageTitles[page] || 'Dashboard';
+            document.getElementById('pageSubtitle').innerHTML = pageSubtitles[page] || '';
+            
+            // Show selected page content
+            document.getElementById(`${page}Content`).style.display = 'block';
+            
+            // Load page-specific content
+            switch(page) {
+                case 'dashboard':
+                    updateDashboardStats();
+                    // Initialize dashboard map if not already initialized
+                    if (!AppState.maps.dashboard) {
+                        setTimeout(initDashboardMap, 100);
+                    }
+                    break;
+                case 'alerts':
+                    loadAlertsPage();
+                    break;
+                case 'map':
+                    setTimeout(initFullMap, 100);
+                    break;
+                case 'responders':
+                    loadRespondersPage();
+                    break;
+                case 'history':
+                    loadHistoryPage();
+                    break;
+                case 'training':
+                    loadTrainingPage();
+                    break;
+                case 'settings':
+                    loadSettingsPage();
+                    break;
+            }
+            
+            AppState.currentPage = page;
+        }
+
+        // Initialize Dashboard Map - FIXED VERSION
+        function initDashboardMap() {
+            console.log('Initializing dashboard map...');
+            
+            const mapElement = document.getElementById('dashboardMap');
+            if (!mapElement) {
+                console.error('Dashboard map element not found');
+                return;
+            }
+            
+            // Clear existing map if any
+            if (AppState.maps.dashboard) {
+                AppState.maps.dashboard.remove();
+            }
+            
+            // Initialize map with a slight delay to ensure container is visible
+            setTimeout(() => {
+                try {
+                    const map = L.map('dashboardMap').setView([40.7489, -73.9680], 13);
+                    
+                    // Add tile layer
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+                    
+                    // Add user location marker
+                    const userIcon = L.divIcon({
+                        className: 'user-icon',
+                        html: `<div style="background-color: var(--primary-blue); width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;"><i class="fas fa-user"></i></div>`,
+                        iconSize: [30, 30]
+                    });
+                    
+                    L.marker([40.7489, -73.9680], { icon: userIcon })
+                        .addTo(map)
+                        .bindPopup('<b>Your Location</b><br>Response Center')
+                        .openPopup();
+                    
+                    // Add 5km radius circle
+                    L.circle([40.7489, -73.9680], {
+                        color: 'var(--primary-blue)',
+                        fillColor: 'var(--primary-blue)',
+                        fillOpacity: 0.1,
+                        radius: 5000
+                    }).addTo(map).bindPopup('5km Response Radius');
+                    
+                    // Add sample emergency markers
+                    const emergencies = [
+                        { lat: 40.7589, lng: -73.9851, type: 'Car Accident', severity: 'high' },
+                        { lat: 40.7736, lng: -73.9716, type: 'Medical Emergency', severity: 'medium' },
+                        { lat: 40.7282, lng: -73.9949, type: 'Fire', severity: 'high' }
+                    ];
+                    
+                    emergencies.forEach(emergency => {
+                        const iconColor = emergency.severity === 'high' ? '#e63946' : '#f4a261';
+                        const icon = L.divIcon({
+                            className: 'emergency-icon',
+                            html: `<div style="background-color: ${iconColor}; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [25, 25]
+                        });
+                        
+                        L.marker([emergency.lat, emergency.lng], { icon: icon })
+                            .addTo(map)
+                            .bindPopup(`<b>${emergency.type}</b><br>Severity: ${emergency.severity}<br><button onclick="showRespondModal(1)" style="background: var(--primary-red); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Respond</button>`);
+                    });
+                    
+                    // Force map resize
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 200);
+                    
+                    // Store map reference
+                    AppState.maps.dashboard = map;
+                    
+                    console.log('Dashboard map initialized successfully');
+                } catch (error) {
+                    console.error('Error initializing dashboard map:', error);
+                    showToast('Map Error', 'Could not load map. Please check your internet connection.', 'error');
+                }
+            }, 300);
+        }
+
+        // Initialize Full Map (for map page)
+        function initFullMap() {
+            console.log('Initializing full map...');
+            
+            const mapContent = document.getElementById('mapContent');
+            mapContent.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Live Emergency Map</h2>
+                        <div class="card-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                            <i class="fas fa-map"></i>
+                        </div>
+                    </div>
+                    <div class="map-container" style="height: 600px;">
+                        <div id="fullMap"></div>
+                        <div class="map-legend">
+                            <h4 style="margin-bottom: 10px; color: var(--primary-blue);">Map Legend</h4>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #e63946;"></div>
+                                <span style="font-size: 14px;">Emergency Incident</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #2a9d8f;"></div>
+                                <span style="font-size: 14px;">Responder</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #f4a261;"></div>
+                                <span style="font-size: 14px;">Hospital</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: #1d3557; opacity: 0.3;"></div>
+                                <span style="font-size: 14px;">5km Radius</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <div>
+                            <button class="btn btn-primary" id="addEmergencyBtn">
+                                <i class="fas fa-plus"></i> Simulate Emergency
+                            </button>
+                            <button class="btn btn-outline" id="addResponderBtn" style="margin-left: 10px;">
+                                <i class="fas fa-user-plus"></i> Add Responder
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline" id="refreshMap">
+                                <i class="fas fa-sync-alt"></i> Refresh Map
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Initialize map after content is added
+            setTimeout(() => {
+                try {
+                    const mapElement = document.getElementById('fullMap');
+                    if (!mapElement) {
+                        console.error('Full map element not found');
+                        return;
+                    }
+                    
+                    // Clear existing map if any
+                    if (AppState.maps.full) {
+                        AppState.maps.full.remove();
+                    }
+                    
+                    const map = L.map('fullMap').setView([40.7489, -73.9680], 13);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+                    
+                    // Add user location marker
+                    const userIcon = L.divIcon({
+                        className: 'user-icon',
+                        html: `<div style="background-color: var(--primary-blue); width: 40px; height: 40px; border-radius: 50%; border: 4px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;"><i class="fas fa-home"></i></div>`,
+                        iconSize: [40, 40]
+                    });
+                    
+                    L.marker([40.7489, -73.9680], { icon: userIcon })
+                        .addTo(map)
+                        .bindPopup('<b>Your Location</b><br>Response Center')
+                        .openPopup();
+                    
+                    // Add 5km radius
+                    L.circle([40.7489, -73.9680], {
+                        color: 'var(--primary-blue)',
+                        fillColor: 'var(--primary-blue)',
+                        fillOpacity: 0.05,
+                        radius: 5000
+                    }).addTo(map);
+                    
+                    // Add sample emergencies with more details
+                    const sampleEmergencies = [
+                        { id: 1, lat: 40.7589, lng: -73.9851, type: 'Car Accident', severity: 'high', time: '5 min ago', responders: 2 },
+                        { id: 2, lat: 40.7736, lng: -73.9716, type: 'Medical Emergency', severity: 'medium', time: '12 min ago', responders: 1 },
+                        { id: 3, lat: 40.7282, lng: -73.9949, type: 'Fire', severity: 'high', time: '8 min ago', responders: 3 }
+                    ];
+                    
+                    sampleEmergencies.forEach(emergency => {
+                        const iconColor = emergency.severity === 'high' ? '#e63946' : '#f4a261';
+                        const pulseClass = emergency.severity === 'high' ? 'pulse-marker' : '';
+                        const icon = L.divIcon({
+                            className: 'emergency-icon',
+                            html: `<div class="${pulseClass}" style="background-color: ${iconColor}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;"><i class="fas fa-exclamation-triangle"></i></div>`,
+                            iconSize: [30, 30]
+                        });
+                        
+                        L.marker([emergency.lat, emergency.lng], { icon: icon })
+                            .addTo(map)
+                            .bindPopup(`
+                                <div style="min-width: 250px;">
+                                    <h3 style="margin: 0 0 10px; color: ${iconColor};">${emergency.type}</h3>
+                                    <p><strong>Severity:</strong> <span style="color: ${iconColor}; font-weight: bold;">${emergency.severity.toUpperCase()}</span></p>
+                                    <p><strong>Time:</strong> ${emergency.time}</p>
+                                    <p><strong>Responders:</strong> ${emergency.responders}</p>
+                                    <button onclick="showRespondModal(${emergency.id})" style="background: var(--primary-red); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px;">
+                                        <i class="fas fa-first-aid"></i> Respond to This Alert
+                                    </button>
+                                </div>
+                            `);
+                    });
+                    
+                    // Add hospitals
+                    const hospitals = [
+                        { lat: 40.7620, lng: -73.9754, name: 'City General Hospital' },
+                        { lat: 40.7410, lng: -73.9897, name: 'Metropolitan Medical Center' }
+                    ];
+                    
+                    hospitals.forEach(hospital => {
+                        const hospitalIcon = L.divIcon({
+                            className: 'hospital-icon',
+                            html: '<div style="background-color: #2a9d8f; width: 25px; height: 25px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">H</div>',
+                            iconSize: [25, 25]
+                        });
+                        
+                        L.marker([hospital.lat, hospital.lng], { icon: hospitalIcon })
+                            .addTo(map)
+                            .bindPopup(`<b>${hospital.name}</b><br>Emergency Services Available`);
+                    });
+                    
+                    // Force map resize
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 300);
+                    
+                    // Store map reference
+                    AppState.maps.full = map;
+                    
+                    // Add button event listeners
+                    setTimeout(() => {
+                        document.getElementById('addEmergencyBtn').addEventListener('click', addSimulatedEmergency);
+                        document.getElementById('addResponderBtn').addEventListener('click', addSimulatedResponder);
+                        document.getElementById('refreshMap').addEventListener('click', () => {
+                            map.invalidateSize();
+                            showToast('Map', 'Map refreshed', 'info');
+                        });
+                    }, 100);
+                    
+                    console.log('Full map initialized successfully');
+                } catch (error) {
+                    console.error('Error initializing full map:', error);
+                    showToast('Map Error', 'Could not load map. Please check your internet connection.', 'error');
+                }
+            }, 100);
+        }
+
+        // Add simulated emergency
+        function addSimulatedEmergency() {
+            if (!AppState.maps.full) return;
+            
+            const map = AppState.maps.full;
+            const center = map.getCenter();
+            
+            // Add random offset
+            const lat = center.lat + (Math.random() - 0.5) * 0.03;
+            const lng = center.lng + (Math.random() - 0.5) * 0.03;
+            
+            const emergencyTypes = ['Car Accident', 'Medical Emergency', 'Fire', 'Motorcycle Accident'];
+            const type = emergencyTypes[Math.floor(Math.random() * emergencyTypes.length)];
+            const severity = Math.random() > 0.5 ? 'high' : 'medium';
+            
+            const iconColor = severity === 'high' ? '#e63946' : '#f4a261';
+            const icon = L.divIcon({
+                className: 'emergency-icon pulse-marker',
+                html: `<div style="background-color: ${iconColor}; width: 35px; height: 35px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.5); animation: pulse 1s infinite;"></div>`,
+                iconSize: [35, 35]
+            });
+            
+            const emergencyId = Math.floor(Math.random() * 1000) + 10;
+            
+            L.marker([lat, lng], { icon: icon })
+                .addTo(map)
+                .bindPopup(`
+                    <div style="min-width: 250px;">
+                        <h3 style="margin: 0 0 10px; color: ${iconColor};">${type} (SIMULATED)</h3>
+                        <p><strong>Severity:</strong> <span style="color: ${iconColor}; font-weight: bold;">${severity.toUpperCase()}</span></p>
+                        <p><strong>Time:</strong> Just now</p>
+                        <button onclick="showRespondModal(${emergencyId})" style="background: var(--primary-red); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px;">
+                            <i class="fas fa-first-aid"></i> Respond to This Alert
+                        </button>
+                    </div>
+                `)
+                .openPopup();
+            
+            showToast('Emergency Added', `Simulated ${type} added to map`, 'info');
+        }
+
+        // Add simulated responder
+        function addSimulatedResponder() {
+            if (!AppState.maps.full) return;
+            
+            const map = AppState.maps.full;
+            const center = map.getCenter();
+            
+            // Add random offset
+            const lat = center.lat + (Math.random() - 0.5) * 0.02;
+            const lng = center.lng + (Math.random() - 0.5) * 0.02;
+            
+            const responderNames = ['Alex Johnson', 'Sam Wilson', 'Taylor Smith', 'Jordan Lee'];
+            const name = responderNames[Math.floor(Math.random() * responderNames.length)];
+            
+            const icon = L.divIcon({
+                className: 'responder-icon',
+                html: '<div style="background-color: #2a9d8f; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>',
+                iconSize: [20, 20]
+            });
+            
+            L.marker([lat, lng], { icon: icon })
+                .addTo(map)
+                .bindPopup(`<b>${name}</b><br>Status: Available<br>Distance: ${(Math.random() * 4 + 0.5).toFixed(1)} km`);
+            
+            showToast('Responder Added', `Simulated responder ${name} added to map`, 'info');
+        }
+
+        // Load Recent Alerts on Dashboard
+        function loadRecentAlerts() {
+            const recentAlertsContainer = document.getElementById('recentAlerts');
+            if (!recentAlertsContainer) return;
+            
+            recentAlertsContainer.innerHTML = '';
+            
+            // Sort alerts by time (newest first) and take first 3
+            const sortedAlerts = [...mockAlerts].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 3);
+            
+            sortedAlerts.forEach(alert => {
+                const alertElement = document.createElement('div');
+                alertElement.className = 'alert-card';
+                alertElement.style.marginBottom = '15px';
+                
+                const timeAgo = getTimeAgo(alert.time);
+                const severityClass = alert.severity === 'high' ? 'high' : alert.severity === 'medium' ? 'medium' : 'low';
+                
+                alertElement.innerHTML = `
+                    <div class="alert-header">
+                        <h3 class="alert-title">${getAlertTypeLabel(alert.type)}</h3>
+                        <span class="alert-badge ${severityClass}">${alert.severity.toUpperCase()}</span>
+                    </div>
+                    <div class="alert-details">
+                        <div class="alert-detail">
+                            <i class="fas fa-map-marker-alt" style="color: var(--primary-blue);"></i>
+                            <span>${alert.location}</span>
+                        </div>
+                        <div class="alert-detail">
+                            <i class="fas fa-clock" style="color: var(--primary-blue);"></i>
+                            <span>${timeAgo}</span>
+                        </div>
+                        <div class="alert-detail">
+                            <i class="fas fa-users" style="color: var(--primary-blue);"></i>
+                            <span>${alert.responders} responders en route</span>
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button class="btn btn-primary" onclick="showRespondModal(${alert.id})">Respond</button>
+                        <button class="btn btn-outline" onclick="showAlertDetails(${alert.id})">Details</button>
+                    </div>
+                `;
+                
+                recentAlertsContainer.appendChild(alertElement);
+            });
+            
+            // Update sidebar alert count
+            const activeAlerts = mockAlerts.filter(alert => alert.status === 'active').length;
+            const sidebarAlertCount = document.getElementById('sidebarAlertCount');
+            if (sidebarAlertCount) {
+                sidebarAlertCount.textContent = activeAlerts;
+            }
+        }
+
+        // Update Dashboard Statistics
+        function updateDashboardStats() {
+            // These would normally come from an API
+            document.getElementById('totalAlerts').textContent = '14';
+            document.getElementById('responsesCount').textContent = '9';
+            document.getElementById('avgResponseTime').textContent = '4.2';
+            document.getElementById('responderRank').textContent = '42';
+        }
+
+        // Handle Emergency Report
+        function handleEmergencyReport(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('emergencyType').value;
+            const location = document.getElementById('emergencyLocation').value;
+            const severity = document.getElementById('emergencySeverity').value;
+            const description = document.getElementById('emergencyDescription').value;
+            
+            if (!type || !location || !severity) {
+                showToast('Error', 'Please fill all required fields', 'error');
+                return;
+            }
+            
+            // In a real app, this would send data to server
+            showToast('Success', 'Emergency alert sent! Nearby responders are being notified.', 'success');
+            
+            // Add to map if on map page
+            if (AppState.maps.full && AppState.currentPage === 'map') {
+                addSimulatedEmergency();
+            }
+            
+            // Reset form
+            emergencyForm.reset();
+            
+            // Close modal
+            emergencyModal.style.display = 'none';
+            
+            // Simulate new alert appearing
+            setTimeout(() => {
+                showToast('Alert', '3 responders have accepted your emergency alert', 'info');
+            }, 2000);
+        }
+
+        // Show Respond Modal
+        function showRespondModal(alertId) {
+            const alert = mockAlerts.find(a => a.id === alertId);
+            if (!alert) {
+                // Create a simulated alert
+                const simulatedAlert = {
+                    id: alertId,
+                    type: 'Car Accident',
+                    severity: 'high',
+                    location: 'Near your location',
+                    time: new Date().toISOString(),
+                    description: 'Simulated emergency for demonstration',
+                    responders: Math.floor(Math.random() * 5) + 1
+                };
+                displayRespondModal(simulatedAlert);
+                return;
+            }
+            
+            displayRespondModal(alert);
+        }
+
+        function displayRespondModal(alert) {
+            AppState.currentAlertId = alert.id;
+            
+            const modalContent = document.getElementById('respondAlertDetails');
+            const severityClass = alert.severity === 'high' ? 'high' : alert.severity === 'medium' ? 'medium' : 'low';
+            
+            modalContent.innerHTML = `
+                <div class="alert-card" style="border-left: none; padding: 0; box-shadow: none;">
+                    <div class="alert-header">
+                        <h3 class="alert-title">${getAlertTypeLabel(alert.type)}</h3>
+                        <span class="alert-badge ${severityClass}">${alert.severity.toUpperCase()}</span>
+                    </div>
+                    <div class="alert-details">
+                        <div class="alert-detail">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span><strong>Location:</strong> ${alert.location}</span>
+                        </div>
+                        <div class="alert-detail">
+                            <i class="fas fa-clock"></i>
+                            <span><strong>Time:</strong> ${new Date(alert.time).toLocaleString()}</span>
+                        </div>
+                        <div class="alert-detail">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span><strong>Description:</strong> ${alert.description}</span>
+                        </div>
+                        <div class="alert-detail">
+                            <i class="fas fa-users"></i>
+                            <span><strong>Current Responders:</strong> ${alert.responders}</span>
+                        </div>
+                    </div>
+                </div>
+                <p style="color: var(--primary-red); font-weight: 600; margin: 20px 0; padding: 15px; background-color: rgba(230, 57, 70, 0.1); border-radius: 8px;">
+                    <i class="fas fa-exclamation-triangle"></i> By confirming your response, you agree to provide assistance to the best of your ability and training.
+                </p>
+            `;
+            
+            respondModal.style.display = 'flex';
+        }
+
+        // Handle Confirm Response
+        function handleConfirmResponse() {
+            const eta = document.getElementById('responseETA').value;
+            const notes = document.getElementById('responseNotes').value;
+            
+            if (!eta || eta < 1) {
+                showToast('Error', 'Please enter a valid ETA', 'error');
+                return;
+            }
+            
+            showToast('Success', `Response confirmed! You're expected to arrive in ${eta} minutes.`, 'success');
+            
+            // Reset form
+            document.getElementById('responseETA').value = '5';
+            document.getElementById('responseNotes').value = '';
+            
+            // Close modal
+            respondModal.style.display = 'none';
+            
+            // Update UI
+            setTimeout(() => {
+                const responsesCount = document.getElementById('responsesCount');
+                if (responsesCount) {
+                    responsesCount.textContent = parseInt(responsesCount.textContent) + 1;
+                }
+                showToast('Update', 'Your response has been logged. Thank you for helping!', 'info');
+            }, 1000);
+        }
+
+        // Show Alert Details
+        function showAlertDetails(alertId) {
+            const alert = mockAlerts.find(a => a.id === alertId);
+            if (!alert) return;
+            
+            // In a full implementation, this would show a detailed view
+            showToast('Alert Details', `${getAlertTypeLabel(alert.type)} at ${alert.location}. Severity: ${alert.severity}.`, 'info');
+        }
+
+        // Load Alerts Page
+        function loadAlertsPage() {
+            const alertsContent = document.getElementById('alertsContent');
+            alertsContent.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Active Emergency Alerts</h2>
+                        <div class="card-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    </div>
+                    <div class="alerts-container" id="allAlertsContainer">
+                        <!-- Alerts will be loaded here -->
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 30px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Alert Filters</h2>
+                        <div class="card-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                            <i class="fas fa-filter"></i>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; padding: 20px 0;">
+                        <button class="btn btn-outline active-filter" data-filter="all">All Alerts</button>
+                        <button class="btn btn-outline" data-filter="high">High Severity</button>
+                        <button class="btn btn-outline" data-filter="medium">Medium Severity</button>
+                        <button class="btn btn-outline" data-filter="low">Low Severity</button>
+                        <button class="btn btn-outline" data-filter="car">Car Accidents</button>
+                        <button class="btn btn-outline" data-filter="medical">Medical Emergencies</button>
+                    </div>
+                </div>
+            `;
+            
+            // Load all alerts
+            setTimeout(() => {
+                const allAlertsContainer = document.getElementById('allAlertsContainer');
+                if (!allAlertsContainer) return;
+                
+                allAlertsContainer.innerHTML = '';
+                
+                mockAlerts.forEach(alert => {
+                    const alertElement = document.createElement('div');
+                    alertElement.className = 'alert-card';
+                    alertElement.dataset.severity = alert.severity;
+                    alertElement.dataset.type = alert.type;
+                    
+                    const timeAgo = getTimeAgo(alert.time);
+                    const severityClass = alert.severity === 'high' ? 'high' : alert.severity === 'medium' ? 'medium' : 'low';
+                    
+                    alertElement.innerHTML = `
+                        <div class="alert-header">
+                            <h3 class="alert-title">${getAlertTypeLabel(alert.type)}</h3>
+                            <div style="display: flex; gap: 10px;">
+                                <span class="alert-badge ${severityClass}">${alert.severity.toUpperCase()}</span>
+                                <span style="font-size: 12px; color: var(--medium-gray);">${timeAgo}</span>
+                            </div>
+                        </div>
+                        <div class="alert-details">
+                            <div class="alert-detail">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${alert.location}</span>
+                            </div>
+                            <div class="alert-detail">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span>${alert.description}</span>
+                            </div>
+                            <div class="alert-detail">
+                                <i class="fas fa-users"></i>
+                                <span>${alert.responders} responders en route • Avg. response time: ${alert.responseTime} min</span>
+                            </div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="btn btn-primary" onclick="showRespondModal(${alert.id})">Respond to Alert</button>
+                            <button class="btn btn-outline" onclick="showAlertDetails(${alert.id})">View Details</button>
+                            <button class="btn btn-outline" onclick="showToast('Share', 'Alert shared successfully', 'info')">
+                                <i class="fas fa-share"></i> Share
+                            </button>
+                        </div>
+                    `;
+                    
+                    allAlertsContainer.appendChild(alertElement);
+                });
+                
+                // Add filter functionality
+                document.querySelectorAll('.active-filter').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.active-filter').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const filter = this.getAttribute('data-filter');
+                        filterAlerts(filter);
+                    });
+                });
+            }, 100);
+        }
+
+        // Filter Alerts
+        function filterAlerts(filter) {
+            const alerts = document.querySelectorAll('.alert-card');
+            
+            alerts.forEach(alert => {
+                if (filter === 'all') {
+                    alert.style.display = 'block';
+                } else if (filter === 'high' || filter === 'medium' || filter === 'low') {
+                    if (alert.dataset.severity === filter) {
+                        alert.style.display = 'block';
+                    } else {
+                        alert.style.display = 'none';
+                    }
+                } else if (filter === 'car') {
+                    if (alert.dataset.type.includes('accident')) {
+                        alert.style.display = 'block';
+                    } else {
+                        alert.style.display = 'none';
+                    }
+                } else if (filter === 'medical') {
+                    if (alert.dataset.type.includes('medical')) {
+                        alert.style.display = 'block';
+                    } else {
+                        alert.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Load Responders Page
+        function loadRespondersPage() {
+            const respondersContent = document.getElementById('respondersContent');
+            respondersContent.innerHTML = `
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Nearby Responders</h2>
+                            <div class="card-icon" style="background-color: rgba(42, 157, 143, 0.1); color: var(--success-green);">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div id="respondersList" style="max-height: 500px; overflow-y: auto;">
+                            <!-- Responders will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Response Network</h2>
+                            <div class="card-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                                <i class="fas fa-network-wired"></i>
+                            </div>
+                        </div>
+                        <div style="text-align: center; padding: 30px 0;">
+                            <div style="font-size: 48px; color: var(--primary-blue); font-weight: bold; margin-bottom: 10px;">42</div>
+                            <div style="color: var(--medium-gray); margin-bottom: 30px;">Active responders in your area</div>
+                            
+                            <div style="display: flex; justify-content: space-around; margin: 30px 0;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 24px; color: var(--success-green); font-weight: bold;">28</div>
+                                    <div style="font-size: 14px; color: var(--medium-gray);">Available</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 24px; color: var(--warning-orange); font-weight: bold;">9</div>
+                                    <div style="font-size: 14px; color: var(--medium-gray);">Responding</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 24px; color: var(--medium-gray); font-weight: bold;">5</div>
+                                    <div style="font-size: 14px; color: var(--medium-gray);">Offline</div>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-primary" style="margin-top: 20px;">
+                                <i class="fas fa-user-plus"></i> Invite New Responders
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Load responders list
+            setTimeout(() => {
+                const respondersList = document.getElementById('respondersList');
+                if (!respondersList) return;
+                
+                respondersList.innerHTML = '';
+                
+                mockResponders.forEach(responder => {
+                    const responderElement = document.createElement('div');
+                    responderElement.className = 'alert-card';
+                    responderElement.style.marginBottom = '15px';
+                    responderElement.style.borderLeft = '6px solid ';
+                    
+                    if (responder.status === 'available') {
+                        responderElement.style.borderLeftColor = 'var(--success-green)';
+                    } else if (responder.status === 'responding') {
+                        responderElement.style.borderLeftColor = 'var(--warning-orange)';
+                    } else {
+                        responderElement.style.borderLeftColor = 'var(--medium-gray)';
+                    }
+                    
+                    responderElement.innerHTML = `
+                        <div class="alert-header">
+                            <h3 class="alert-title">${responder.name}</h3>
+                            <span class="alert-badge ${responder.status === 'available' ? 'low' : responder.status === 'responding' ? 'medium' : ''}" style="text-transform: capitalize;">
+                                ${responder.status}
+                            </span>
+                        </div>
+                        <div class="alert-details">
+                            <div class="alert-detail">
+                                <i class="fas fa-location-arrow"></i>
+                                <span>${responder.distance} km away</span>
+                            </div>
+                            <div class="alert-detail">
+                                <i class="fas fa-certificate"></i>
+                                <span>${responder.skills.join(', ')}</span>
+                            </div>
+                        </div>
+                        <div class="alert-actions">
+                            <button class="btn btn-outline" onclick="showToast('Message', 'Messaging feature would open here', 'info')">
+                                <i class="fas fa-comment"></i> Message
+                            </button>
+                            <button class="btn btn-outline" onclick="showToast('Call', 'Calling ${responder.name}...', 'info')">
+                                <i class="fas fa-phone"></i> Call
+                            </button>
+                        </div>
+                    `;
+                    
+                    respondersList.appendChild(responderElement);
+                });
+            }, 100);
+        }
+
+        // Load History Page
+        function loadHistoryPage() {
+            const historyContent = document.getElementById('historyContent');
+            historyContent.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Your Response History</h2>
+                        <div class="card-icon" style="background-color: rgba(233, 196, 106, 0.1); color: #b38c00;">
+                            <i class="fas fa-history"></i>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa; border-bottom: 2px solid #eee;">
+                                    <th style="padding: 15px; text-align: left;">Date & Time</th>
+                                    <th style="padding: 15px; text-align: left;">Emergency Type</th>
+                                    <th style="padding: 15px; text-align: left;">Location</th>
+                                    <th style="padding: 15px; text-align: left;">Response Time</th>
+                                    <th style="padding: 15px; text-align: left;">Status</th>
+                                    <th style="padding: 15px; text-align: left;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTable">
+                                <!-- History rows will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="text-align: center; padding: 30px;">
+                        <button class="btn btn-outline" onclick="showToast('Export', 'History export would download here', 'info')">
+                            <i class="fas fa-download"></i> Export History
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card" style="margin-top: 30px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Your Response Statistics</h2>
+                        <div class="card-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 20px 0;">
+                        <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: var(--radius);">
+                            <div style="font-size: 32px; color: var(--primary-blue); font-weight: bold;">9</div>
+                            <div style="color: var(--medium-gray);">Total Responses</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: var(--radius);">
+                            <div style="font-size: 32px; color: var(--success-green); font-weight: bold;">4.2</div>
+                            <div style="color: var(--medium-gray);">Avg. Response Time (min)</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: var(--radius);">
+                            <div style="font-size: 32px; color: #b38c00; font-weight: bold;">42</div>
+                            <div style="color: var(--medium-gray);">Community Rank</div>
+                        </div>
+                        <div style="text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: var(--radius);">
+                            <div style="font-size: 32px; color: var(--primary-red); font-weight: bold;">3</div>
+                            <div style="color: var(--medium-gray);">Lives Impacted</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Load history table
+            setTimeout(() => {
+                const historyTable = document.getElementById('historyTable');
+                if (!historyTable) return;
+                
+                const historyData = [
+                    { date: '2023-10-15 14:30', type: 'Car Accident', location: '5th Ave & Main St', time: '4 min', status: 'Completed' },
+                    { date: '2023-10-14 11:20', type: 'Medical Emergency', location: 'Central Park', time: '3 min', status: 'Completed' },
+                    { date: '2023-10-12 18:45', type: 'Motorcycle Accident', location: 'Highway 101', time: '7 min', status: 'Completed' },
+                    { date: '2023-10-10 09:15', type: 'Car Accident', location: 'Broadway & 42nd St', time: '5 min', status: 'Completed' },
+                    { date: '2023-10-08 16:30', type: 'Pedestrian Incident', location: 'Park Ave', time: '6 min', status: 'Completed' },
+                    { date: '2023-10-05 13:10', type: 'Medical Emergency', location: 'Times Square', time: '4 min', status: 'Completed' },
+                    { date: '2023-10-03 20:25', type: 'Car Accident', location: 'Madison Ave', time: '8 min', status: 'Completed' },
+                    { date: '2023-10-01 07:45', type: 'Fire', location: 'West 34th St', time: '10 min', status: 'Assisted' }
+                ];
+                
+                historyData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #eee';
+                    
+                    row.innerHTML = `
+                        <td style="padding: 15px;">${item.date}</td>
+                        <td style="padding: 15px;">${item.type}</td>
+                        <td style="padding: 15px;">${item.location}</td>
+                        <td style="padding: 15px;">${item.time}</td>
+                        <td style="padding: 15px;">
+                            <span style="padding: 5px 10px; background-color: rgba(42, 157, 143, 0.1); color: var(--success-green); border-radius: 20px; font-size: 12px;">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td style="padding: 15px;">
+                            <button class="btn btn-outline" style="padding: 5px 10px; font-size: 14px;" onclick="showToast('Details', 'Detailed view would open here', 'info')">
+                                View Details
+                            </button>
+                        </td>
+                    `;
+                    
+                    historyTable.appendChild(row);
+                });
+            }, 100);
+        }
+
+        // Load Training Page
+        function loadTrainingPage() {
+            const trainingContent = document.getElementById('trainingContent');
+            trainingContent.innerHTML = `
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">First Aid Training</h2>
+                            <div class="card-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                                <i class="fas fa-first-aid"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <div style="background-color: #f8f9fa; padding: 20px; border-radius: var(--radius); margin-bottom: 15px;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 10px;">Basic First Aid Course</h3>
+                                <p style="color: var(--medium-gray); margin-bottom: 15px;">Learn essential first aid skills for common emergencies</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--success-green); font-weight: 600;">Completed</span>
+                                    <button class="btn btn-outline" style="padding: 8px 15px;" onclick="showToast('Course', 'Opening course review...', 'info')">Review</button>
+                                </div>
+                            </div>
+                            
+                            <div style="background-color: #f8f9fa; padding: 20px; border-radius: var(--radius); margin-bottom: 15px;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 10px;">CPR & AED Certification</h3>
+                                <p style="color: var(--medium-gray); margin-bottom: 15px;">Learn cardiopulmonary resuscitation and automated external defibrillator use</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--primary-blue); font-weight: 600;">In Progress (75%)</span>
+                                    <button class="btn btn-primary" style="padding: 8px 15px;" onclick="showToast('Course', 'Continuing CPR course...', 'info')">Continue</button>
+                                </div>
+                            </div>
+                            
+                            <div style="background-color: #f8f9fa; padding: 20px; border-radius: var(--radius); margin-bottom: 15px;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 10px;">Trauma Response Training</h3>
+                                <p style="color: var(--medium-gray); margin-bottom: 15px;">Advanced training for serious injuries and trauma cases</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--medium-gray); font-weight: 600;">Not Started</span>
+                                    <button class="btn btn-outline" style="padding: 8px 15px;" onclick="showToast('Enrollment', 'Enrolling in trauma course...', 'info')">Enroll</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Quick Guides</h2>
+                            <div class="card-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                                <i class="fas fa-book"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;" onclick="showToast('Guide', 'Opening Car Accident guide', 'info')">
+                                    <i class="fas fa-car-crash" style="font-size: 24px; color: var(--primary-red);"></i>
+                                    <span>Car Accidents</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;" onclick="showToast('Guide', 'Opening Heart Attack guide', 'info')">
+                                    <i class="fas fa-heartbeat" style="font-size: 24px; color: var(--primary-red);"></i>
+                                    <span>Heart Attacks</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;" onclick="showToast('Guide', 'Opening Burns guide', 'info')">
+                                    <i class="fas fa-fire" style="font-size: 24px; color: var(--primary-red);"></i>
+                                    <span>Burns</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;" onclick="showToast('Guide', 'Opening Bleeding guide', 'info')">
+                                    <i class="fas fa-tint" style="font-size: 24px; color: var(--primary-red);"></i>
+                                    <span>Bleeding</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;" onclick="showToast('Guide', 'Opening Choking guide', 'info')">
+                                    <i class="fas fa-ban" style="font-size: 24px; color: var(--primary-red);"></i>
+                                    <span>Choking</span>
+                                </button>
+                                <button class="btn btn-outline" style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px;" onclick="showToast('Guide', 'Opening Fractures guide', 'info')">
+                                    <i class="fas fa-bone" style="font-size: 24px; color: var(--primary-red);"></i>
+                                    <span>Fractures</span>
+                                </button>
+                            </div>
+                            
+                            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                                <h3 style="color: var(--primary-blue); margin-bottom: 15px;">Emergency Contact Numbers</h3>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: var(--radius); margin-bottom: 10px;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Local Emergency</span>
+                                        <span style="font-weight: 600; color: var(--primary-blue);">911</span>
+                                    </div>
+                                </div>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: var(--radius); margin-bottom: 10px;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Poison Control</span>
+                                        <span style="font-weight: 600; color: var(--primary-blue);">1-800-222-1222</span>
+                                    </div>
+                                </div>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: var(--radius);">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Save@5km Support</span>
+                                        <span style="font-weight: 600; color: var(--primary-blue);">1-800-SAVE-555</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load Settings Page
+        function loadSettingsPage() {
+            const settingsContent = document.getElementById('settingsContent');
+            settingsContent.innerHTML = `
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Account Settings</h2>
+                            <div class="card-icon" style="background-color: rgba(29, 53, 87, 0.1); color: var(--primary-blue);">
+                                <i class="fas fa-user-cog"></i>
+                            </div>
+                        </div>
+                        <form id="settingsForm">
+                            <div class="form-group">
+                                <label for="settingsName">Full Name</label>
+                                <input type="text" id="settingsName" class="form-control" value="John Smith">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="settingsPhone">Phone Number</label>
+                                <input type="tel" id="settingsPhone" class="form-control" value="+1 (555) 123-4567">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="settingsEmail">Email Address</label>
+                                <input type="email" id="settingsEmail" class="form-control" value="john.smith@example.com">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="settingsAddress">Address</label>
+                                <input type="text" id="settingsAddress" class="form-control" value="123 Main St, New York, NY 10001">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="settingsStatus">Response Status</label>
+                                <select id="settingsStatus" class="form-control">
+                                    <option value="active" selected>Active - Available to respond</option>
+                                    <option value="busy">Busy - Limited availability</option>
+                                    <option value="away">Away - Not available to respond</option>
+                                </select>
+                            </div>
+                            
+                            <div style="margin-top: 30px;">
+                                <button type="submit" class="btn btn-primary" onclick="showToast('Settings', 'Your settings have been saved', 'success')">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Notification Settings</h2>
+                            <div class="card-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
+                                <div>
+                                    <div style="font-weight: 600;">Emergency Alerts</div>
+                                    <div style="color: var(--medium-gray); font-size: 14px;">Notifications for emergencies in your area</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
+                                <div>
+                                    <div style="font-weight: 600;">Response Updates</div>
+                                    <div style="color: var(--medium-gray); font-size: 14px;">Updates on emergencies you're responding to</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
+                                <div>
+                                    <div style="font-weight: 600;">Training Reminders</div>
+                                    <div style="color: var(--medium-gray); font-size: 14px;">Reminders for first aid training updates</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0;">
+                                <div>
+                                    <div style="font-weight: 600;">Community News</div>
+                                    <div style="color: var(--medium-gray); font-size: 14px;">Updates from the Save@5km community</div>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+                            <h3 style="color: var(--primary-blue); margin-bottom: 15px;">Response Radius</h3>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <input type="range" min="1" max="20" value="5" style="flex: 1;">
+                                <span style="font-weight: 600; color: var(--primary-blue);">5 km</span>
+                            </div>
+                            <p style="color: var(--medium-gray); font-size: 14px; margin-top: 10px;">You will receive alerts for emergencies within this distance from your location.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card" style="margin-top: 30px;">
+                    <div class="card-header">
+                        <h2 class="card-title">Danger Zone</h2>
+                        <div class="card-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--primary-red);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div style="padding: 20px 0;">
+                        <p style="color: var(--medium-gray); margin-bottom: 20px;">These actions are irreversible. Please proceed with caution.</p>
+                        <div style="display: flex; gap: 15px;">
+                            <button class="btn btn-outline" style="border-color: var(--primary-red); color: var(--primary-red);" onclick="handleLogout()">
+                                <i class="fas fa-sign-out-alt"></i> Log Out
+                            </button>
+                            <button class="btn btn-outline" style="border-color: var(--primary-red); color: var(--primary-red);" onclick="showToast('Account', 'Account deactivation would proceed here', 'info')">
+                                <i class="fas fa-user-slash"></i> Deactivate Account
+                            </button>
+                            <button class="btn btn-outline" style="border-color: var(--primary-red); color: var(--primary-red);" onclick="showToast('Account', 'Account deletion would proceed here', 'info')">
+                                <i class="fas fa-trash-alt"></i> Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add switch CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                .switch {
+                    position: relative;
+                    display: inline-block;
+                    width: 50px;
+                    height: 24px;
+                }
+                
+                .switch input {
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+                
+                .slider {
+                    position: absolute;
+                    cursor: pointer;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: #ccc;
+                    transition: .4s;
+                    border-radius: 24px;
+                }
+                
+                .slider:before {
+                    position: absolute;
+                    content: "";
+                    height: 16px;
+                    width: 16px;
+                    left: 4px;
+                    bottom: 4px;
+                    background-color: white;
+                    transition: .4s;
+                    border-radius: 50%;
+                }
+                
+                input:checked + .slider {
+                    background-color: var(--primary-blue);
+                }
+                
+                input:checked + .slider:before {
+                    transform: translateX(26px);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Handle logout
+        function handleLogout() {
+            localStorage.removeItem('save5km_user');
+            AppState.currentUser = null;
+            AppState.isLoggedIn = false;
+            AppState.maps = {};
+            
+            showToast('Logged Out', 'You have been successfully logged out', 'info');
+            
+            setTimeout(() => {
+                appContainer.style.display = 'none';
+                loginPage.style.display = 'flex';
+                // Reset login form
+                document.getElementById('loginPhone').value = '+1 (555) 123-4567';
+                document.getElementById('loginPassword').value = 'password123';
+            }, 1500);
+        }
+
+        // Helper Functions
+        function switchTab(tabId) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tab') === tabId) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `${tabId}-tab`) {
+                    content.classList.add('active');
+                }
+            });
+        }
+
+        function getAlertTypeLabel(type) {
+            const labels = {
+                'car_accident': 'Car Accident',
+                'motorcycle_accident': 'Motorcycle Accident',
+                'pedestrian_hit': 'Pedestrian Hit',
+                'medical_emergency': 'Medical Emergency',
+                'fire': 'Fire',
+                'other': 'Other Emergency'
+            };
+            return labels[type] || type;
+        }
+
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const past = new Date(timestamp);
+            const diffMs = now - past;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+            
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+            
+            const diffDays = Math.floor(diffHours / 24);
+            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+        }
+
+        function showToast(title, message, type) {
+            // Set toast content
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = message;
+            
+            // Set toast type
+            toast.className = 'toast';
+            toast.classList.add(`toast-${type}`);
+            
+            // Show toast
+            toast.classList.add('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
+        // Make functions available globally for inline onclick handlers
+        window.showRespondModal = showRespondModal;
+        window.showAlertDetails = showAlertDetails;
+        window.addSimulatedEmergency = addSimulatedEmergency;
+        window.addSimulatedResponder = addSimulatedResponder;
+        window.handleLogout = handleLogout;
+        
+        // Add CSS for pulse animation
+        const pulseStyle = document.createElement('style');
+        pulseStyle.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.2); opacity: 0.7; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            
+            .leaflet-div-icon {
+                background: transparent !important;
+                border: none !important;
+            }
+        `;
+        document.head.appendChild(pulseStyle);
+    </script>
+</body>
+</html>
